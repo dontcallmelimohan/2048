@@ -3,12 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>体重记录</title>
-    <!-- 只引入 Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 全局：页面居中 + 空白 */
         * {
             margin: 0;
             padding: 0;
@@ -16,89 +14,248 @@
         }
 
         body {
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
-            align-items: center;
             justify-content: center;
-            background: #ffffff;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
         }
 
-        /* 唯一的输入框 */
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 30px;
+        }
+
+        #weightChart {
+            width: 100% !important;
+            height: 400px !important;
+        }
+
         #weight {
-            font-size: 28px;
-            padding: 16px 24px;
-            width: 280px;
+            font-size: 26px;
+            padding: 14px 20px;
+            width: 260px;
             text-align: center;
             border: 1px solid #ccc;
-            border-radius: 12px;
-            outline: none;
+            border-radius: 10px;
+        }
+
+        button {
+            font-size: 20px;
+            padding: 12px 30px;
+            border-radius: 10px;
+            /* border: none; */
+            border: 1px solid #ccc;
+            background: #ffffff;
+            color: #00000084;
+            cursor: pointer;
+        }
+
+        #message {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+            min-height: 20px;
+            text-align: center;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        .error {
+            color: #dc3545;
         }
     </style>
 </head>
 
 <body>
-    <!-- 页面上唯一的东西：输入框 -->
-    <input type="number" id="weight" placeholder="输入体重" step="0.1">
+
+    <div class="input-section">
+        <input type="number" id="weight" placeholder="输入体重" step="0.1">
+        <button onclick="saveWeight()">提交体重</button>
+        <div id="message"></div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="weightChart"></canvas>
+    </div>
 
     <script>
-        // ====================== 你只需要改这 2 个东西 ======================
+        // 你的信息
         const SUPABASE_URL = "https://lcbqhraxzadgfnzrcvjw.supabase.co";
         const SUPABASE_KEY = "sb_publishable_MdZyOd7UJigomA3xGSd_Ig_gzg5ds5a";
-        // ==================================================================
 
-        // 创建数据库连接
-        let supabase;
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log("✅ Supabase 连接成功");
-        } catch (error) {
-            console.error("❌ Supabase 连接失败:", error);
-            alert("连接失败，请检查网络或重新刷新页面");
+        // ✅ FIXED：这里改名了！
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 图表实例
+        let weightChart = null;
+
+        // 获取体重数据
+        async function fetchWeightData() {
+            try {
+                const { data, error } = await sb
+                    .from("weights")
+                    .select("weight, created_at")
+                    .order("created_at", { ascending: true });
+
+                if (error) {
+                    console.error("获取数据失败:", error);
+                    return [];
+                }
+
+                return data || [];
+            } catch (err) {
+                console.error("获取数据异常:", err);
+                return [];
+            }
         }
 
-        // 输入完按回车 → 保存
-        const weightInput = document.getElementById("weight");
-        console.log("输入框元素:", weightInput);
+        // 绘制体重折线图
+        async function drawWeightChart() {
+            const data = await fetchWeightData();
 
-        if (weightInput) {
-            weightInput.addEventListener("keydown", async (e) => {
-                console.log("按键:", e.key);
-                if (e.key === "Enter") {
-                    const val = e.target.value.trim();
-                    console.log("输入的值:", val);
-                    if (!val) {
-                        console.log("值为空，返回");
-                        return;
-                    }
+            if (data.length === 0) {
+                showMessage("暂无数据", "error");
+                return;
+            }
 
-                    try {
-                        // 插入数据库
-                        const { data, error } = await supabase
-                            .from("weights") // 表名必须叫 weights
-                            .insert([
-                                {
-                                    weight: parseFloat(val),
-                                    created_at: new Date().toISOString()
-                                }
-                            ]);
+            // 准备图表数据
+            const labels = data.map(item => {
+                const date = new Date(item.created_at);
+                return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            });
 
-                        if (error) {
-                            console.error("数据库错误:", error);
-                            alert("保存失败: " + error.message);
-                        } else {
-                            console.log("✅ 数据保存成功:", data);
-                            // 保存后清空输入框
-                            e.target.value = "";
-                            alert("保存成功 ✅");
+            const weights = data.map(item => item.weight);
+
+            // 如果图表已存在，先销毁
+            if (weightChart) {
+                weightChart.destroy();
+            }
+
+            // 创建新图表
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '体重 (kg)',
+                        data: weights,
+                        borderColor: '#4CAF50',
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#4CAF50',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '体重变化趋势',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
                         }
-                    } catch (e) {
-                        console.error("异常:", e);
-                        alert("发生错误: " + e.message);
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '时间'
+                            },
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '体重 (kg)'
+                            },
+                            beginAtZero: false
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
                     }
                 }
             });
-        } else {
-            console.error("找不到输入框元素");
         }
+
+        // 显示消息函数
+        function showMessage(text, type = '') {
+            const messageEl = document.getElementById("message");
+            messageEl.textContent = text;
+            messageEl.className = type;
+
+            // 3秒后自动消失
+            setTimeout(() => {
+                messageEl.textContent = '';
+                messageEl.className = '';
+            }, 1000);
+        }
+
+        // 提交函数
+        async function saveWeight() {
+            const val = document.getElementById("weight").value.trim();
+            if (!val) {
+                showMessage("请输入体重！", "error");
+                return;
+            }
+
+            try {
+                const { error } = await sb
+                    .from("weights")
+                    .insert([{ weight: parseFloat(val) }]);
+
+                if (error) {
+                    showMessage("保存失败：" + error.message, "error");
+                    return;
+                }
+
+                showMessage("保存成功", "success");
+                document.getElementById("weight").value = "";
+
+                // 重新绘制图表
+                drawWeightChart();
+            } catch (err) {
+                showMessage("错误：" + err.toString(), "error");
+            }
+        }
+
+        // 页面加载完成后初始化图表
+        window.addEventListener('load', () => {
+            drawWeightChart();
+        });
     </script>
 </body>
+
+</html>
