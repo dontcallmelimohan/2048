@@ -4,191 +4,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>高级陀螺仪光影反馈</title>
+    <title>超炫陀螺仪3D玻璃光影</title>
     <style>
         :root {
-            /* 1. 定义全局变量，用于 JS 动态控制高光和旋转 */
             --gx: 50%;
-            /* 高光 X 轴中心 */
             --gy: 50%;
-            /* 高光 Y 轴中心 */
             --rx: 0deg;
-            /* 容器 X 轴旋转角度 */
             --ry: 0deg;
-            /* 容器 Y 轴旋转角度 */
+            /* 新增：发光强度变量 */
+            --glow: 0px;
         }
 
         body {
             margin: 0;
             padding: 0;
             height: 100vh;
-            /* 2. 深色背景，突出高光效果 */
-            background: #0a0a0a;
+            background: #050510;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             font-family: -apple-system, sans-serif;
             overflow: hidden;
-            /* 3. 开启 3D 视距，这是实现 3D 翻转感的关键 */
-            perspective: 1000px;
+            perspective: 800px;
+            /* 增强3D纵深感 */
+            background: radial-gradient(circle at center, #101020 0%, #000 70%);
         }
 
-        /* 4. 授权按钮：iOS 必须由用户主动点击触发权限请求 */
         #auth-btn {
             position: fixed;
             top: 20px;
             z-index: 100;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(100, 120, 255, 0.2);
             color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 12px 24px;
-            border-radius: 20px;
-            font-size: 14px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(120, 150, 255, 0.3);
+            padding: 14px 30px;
+            border-radius: 50px;
+            font-size: 15px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             cursor: pointer;
-            transition: background 0.2s;
-            -webkit-tap-highlight-color: transparent;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(100, 120, 255, 0.2);
+        }
+
+        #auth-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(100, 120, 255, 0.4);
         }
 
         #auth-btn:active {
-            background: rgba(255, 255, 255, 0.2);
+            transform: scale(0.95);
         }
 
-        /* 5. 3D 翻转容器：应用陀螺仪带来的旋转角度 */
         .stage {
             transform: rotateX(var(--rx)) rotateY(var(--ry));
-            transition: transform 0.1s ease-out;
-            /* 增加阻尼感，让动画平滑 */
+            transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+            /* 更丝滑的物理动画 */
         }
 
-        /* 6. 高级毛玻璃卡片 */
         .glass-card {
-            width: 300px;
-            height: 200px;
-            border-radius: 30px;
+            width: 320px;
+            height: 220px;
+            border-radius: 24px;
             position: relative;
             overflow: hidden;
-            /* 隐藏超出卡片的高光 */
 
-            /* 7. 核心：iOS 系统级毛玻璃质感 (高模糊 + 高饱和度) */
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(25px) saturate(210%);
-            -webkit-backdrop-filter: blur(25px) saturate(210%);
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(30px) saturate(250%);
+            -webkit-backdrop-filter: blur(30px) saturate(250%);
 
-            /* 8. 极细边框，模拟玻璃边缘的折射光 */
-            border: 0.5px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            /* 增强边框 */
+            box-shadow:
+                0 15px 35px rgba(0, 0, 0, 0.3),
+                0 0 30px var(--glow);
+            /* 动态彩色外发光 */
 
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 18px;
-            font-weight: 600;
+            color: rgba(255, 255, 255, 1);
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
             touch-action: none;
-            /* 禁用默认手势 */
         }
 
-        /* 9. 核心：动态高光层 (使用 ::after 伪元素) */
+        /* 第一层：强高光 */
         .glass-card::after {
             content: '';
             position: absolute;
-            /* 高光层需要比卡片大，以便在移动时不会露出边缘 */
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-
-            /* 10. 径向渐变模拟光源：中心最亮，向四周衰减 */
+            top: -100%;
+            left: -100%;
+            width: 300%;
+            height: 300%;
             background: radial-gradient(circle at var(--gx) var(--gy),
-                    rgba(255, 255, 255, 0.18) 0%,
-                    transparent 45%);
-
+                    rgba(255, 255, 255, 0.35) 0%,
+                    /* 更亮 */
+                    transparent 35%);
             pointer-events: none;
-            /* 确保高光层不干扰点击事件 */
+            transition: all 0.1s ease;
+        }
+
+        /* 第二层：彩色环境光 */
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--gx) var(--gy),
+                    rgba(120, 180, 255, 0.15) 0%,
+                    transparent 50%);
+            pointer-events: none;
+            opacity: 0.8;
         }
 
         .status {
             position: fixed;
             bottom: 30px;
-            color: #333;
-            font-size: 10px;
+            color: rgba(120, 160, 255, 0.6);
+            font-size: 12px;
             letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(120, 160, 255, 0.3);
         }
     </style>
 </head>
 
 <body>
-
-    <button id="auth-btn">开启 3D 触感视觉</button>
-
+    <button id="auth-btn">开启 3D 炫光体验</button>
     <div class="stage">
-        <div class="glass-card">
-            GYRO GLASS
-        </div>
+        <div class="glass-card">3D GYRO</div>
     </div>
-
     <div class="status" id="log">GYRO: INACTIVE</div>
 
     <script>
         const authBtn = document.getElementById('auth-btn');
-        const root = document.documentElement; // 用于修改全局 CSS 变量
+        const root = document.documentElement;
         const log = document.getElementById('log');
 
-        // 1. 请求权限并启动监听 (iOS 兼容性关键)
         authBtn.addEventListener('click', async () => {
-            // iOS 13+ 权限请求逻辑
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const permission = await DeviceOrientationEvent.requestPermission();
                     if (permission === 'granted') {
                         startTracking();
-                        authBtn.style.display = 'none'; // 授权后隐藏按钮
+                        authBtn.style.display = 'none';
                     } else {
-                        alert('需要授权才能体验高级视觉效果');
+                        alert('请允许陀螺仪权限');
                     }
                 } catch (err) {
-                    alert('请在 HTTPS 环境下体验，或确认浏览器支持陀螺仪');
+                    alert('仅支持HTTPS环境 / 手机浏览器');
                 }
             } else {
-                // 非 iOS 设备或旧版本 iOS 直接启动
                 startTracking();
                 authBtn.style.display = 'none';
             }
         });
 
-        // 2. 启动陀螺仪监听
         function startTracking() {
             window.addEventListener('deviceorientation', (e) => {
-                // beta: 前后倾斜角度 (-180 到 180) -> 映射到高光 Y 和 3D 旋转 X
-                // gamma: 左右倾斜角度 (-90 到 90) -> 映射到高光 X 和 3D 旋转 Y
                 let beta = e.beta;
                 let gamma = e.gamma;
 
                 if (beta === null || gamma === null) return;
 
-                // 3. 限制活动范围，防止过度倾斜导致视觉崩坏 (限制在 -30 到 30 度内)
-                let cleanBeta = Math.min(Math.max(beta, -30), 30);
-                let cleanGamma = Math.min(Math.max(gamma, -30), 30);
+                // 扩大活动角度，更夸张
+                let cleanBeta = Math.min(Math.max(beta, -45), 45);
+                let cleanGamma = Math.min(Math.max(gamma, -45), 45);
 
-                // 4. 计算并更新 CSS 变量
-                // 高光位置：将角度 (-30到30) 映射到高光的中心坐标 (0% 到 100%)
-                // 乘数 1.5 用于调节光影随倾斜移动的速度，数值越大移动越灵敏
-                const gx = 50 + (cleanGamma * 1.5);
-                const gy = 50 + (cleanBeta * 1.5);
+                // 高光移动更快更明显
+                const gx = 50 + (cleanGamma * 2.2);
+                const gy = 50 + (cleanBeta * 2.2);
 
+                // 3D旋转幅度大幅增强
+                const rotateX = -cleanBeta * 0.8;
+                const rotateY = cleanGamma * 0.8;
+
+                // 动态彩色外发光（倾斜越厉害，光越强）
+                const glowIntensity = Math.sqrt(cleanBeta ** 2 + cleanGamma ** 2) * 2;
+                const glowColor = `rgba(100, 150, 255, ${glowIntensity / 200})`;
+
+                // 更新所有变量
                 root.style.setProperty('--gx', `${gx}%`);
                 root.style.setProperty('--gy', `${gy}%`);
+                root.style.setProperty('--rx', `${rotateX}deg`);
+                root.style.setProperty('--ry', `${rotateY}deg`);
+                root.style.setProperty('--glow', `${glowIntensity}px ${glowColor}`);
 
-                // 5. 计算并更新 3D 旋转角度：角度稍微缩小增加平滑感
-                // rotateX 对应前后倾斜 (beta)，rotateY 对应左右倾斜 (gamma)
-                root.style.setProperty('--rx', `${-cleanBeta * 0.4}deg`);
-                root.style.setProperty('--ry', `${cleanGamma * 0.4}deg`);
-
-                // 6. 状态日志
-                log.innerText = `GYRO: ACTIVE (B:${Math.round(beta)} G:${Math.round(gamma)})`;
+                log.innerText = `✨ GYRO ACTIVE | B:${Math.round(beta)} G:${Math.round(gamma)}`;
             });
         }
     </script>
