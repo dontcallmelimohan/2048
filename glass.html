@@ -4,270 +4,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>iOS Haptic Drum Pad (2026)</title>
+    <title>Universal 3x3 Haptic Pad</title>
     <style>
-        :root {
-            /* 1. 2026玻璃拟态色系：高透、高亮 */
-            --glass-bg: rgba(255, 255, 255, 0.12);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --pad-active: rgba(255, 255, 255, 0.25);
-            --ios-blue: #007AFF;
-        }
-
-        body,
-        html {
+        body {
             margin: 0;
-            padding: 0;
-            height: 100%;
+            background: #000;
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            /* 背景使用鲜艳的灵魂渐变，突出玻璃透光感 */
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            font-family: -apple-system, system-ui, sans-serif;
             overflow: hidden;
-            /* 防止滚屏 */
+            /* 防止 PC 端用户选中文字 */
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        /* 2. 打击垫容器 */
-        .pad-container {
+        .pad-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            /* 3x2网格 */
-            gap: 20px;
-            padding: 30px;
-
-            /* 核心：玻璃拟态主体 */
-            background: var(--glass-bg);
-            backdrop-filter: blur(25px) saturate(210%);
-            -webkit-backdrop-filter: blur(25px) saturate(210%);
-
-            border-radius: 35px;
-            /* iOS超大圆角 */
-            border: 0.5px solid var(--glass-border);
-            /* 极细边框 */
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            /* 适配移动端：使用更小的单位 vmin 确保在横竖屏下都能完整显示 */
+            grid-template-columns: repeat(3, min(110px, 28vw));
+            gap: 12px;
+            perspective: 1000px;
         }
 
-        /* 3. 单个打击垫 */
-        .drum-pad {
-            width: 90px;
-            height: 90px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 0.5px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-
+        .pad {
+            aspect-ratio: 1 / 1;
+            /* 保持正方形 */
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: rgba(255, 255, 255, 0.9);
-            cursor: pointer;
-
-            /* 零延迟反馈的关键 CSS */
-            -webkit-tap-highlight-color: transparent;
+            color: #fff;
+            transition: transform 0.1s cubic-bezier(0.2, 0, 0.2, 1), background 0.2s;
             touch-action: none;
-            /* 彻底禁用所有浏览器手势 */
-
-            /* 柔和的过渡动画 */
-            transition: all 0.05s ease-out;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
         }
 
-        /* 4. 打击垫按下时的视觉反馈（模拟物理阻尼） */
-        .drum-pad.active {
-            background: var(--pad-active);
-            transform: scale(0.92);
-            /* 按钮下陷感 */
-            border-color: rgba(255, 255, 255, 0.3);
-            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.1);
-        }
-
-        .pad-note {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
-
-        .pad-type {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
+        /* 标签文字极简化 */
+        .pad span {
+            font-size: 10px;
+            opacity: 0.4;
             letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
         }
 
-        /* 底部的提示信息 */
-        .info-tip {
+        .pad b {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* 点击效果 */
+        .pad:active,
+        .pad.is-active {
+            transform: scale(0.92) translateZ(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .info {
             position: fixed;
             bottom: 30px;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 13px;
-            text-align: center;
-            width: 100%;
+            color: #333;
+            font-size: 10px;
+            text-transform: uppercase;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="pad-container">
-        <div class="drum-pad" data-sound="kick" id="pad1">
-            <div class="pad-note">A</div>
-            <div class="pad-type">KICK</div>
-        </div>
-        <div class="drum-pad" data-sound="tom" id="pad2">
-            <div class="pad-note">B</div>
-            <div class="pad-type">TOM</div>
-        </div>
-        <div class="drum-pad" data-sound="snare" id="pad3">
-            <div class="pad-note">C</div>
-            <div class="pad-type">SNARE</div>
-        </div>
-        <div class="drum-pad" data-sound="hihat-closed" id="pad4">
-            <div class="pad-note">D</div>
-            <div class="pad-type">H-HAT C</div>
-        </div>
-        <div class="drum-pad" data-sound="hihat-open" id="pad5">
-            <div class="pad-note">E</div>
-            <div class="pad-type">H-HAT O</div>
-        </div>
-        <div class="drum-pad" data-sound="click" id="pad6">
-            <div class="pad-note">F</div>
-            <div class="pad-type">CLICK</div>
-        </div>
+    <div class="pad-grid" id="grid">
+        <div class="pad" data-type="kick"><b>A</b><span>KICK</span></div>
+        <div class="pad" data-type="kick"><b>B</b><span>BOOM</span></div>
+        <div class="pad" data-type="snare"><b>C</b><span>CRISP</span></div>
+        <div class="pad" data-type="snare"><b>D</b><span>SNAP</span></div>
+        <div class="pad" data-type="hihat"><b>E</b><span>SHARP</span></div>
+        <div class="pad" data-type="hihat"><b>F</b><span>TICK</span></div>
+        <div class="pad" data-type="tom"><b>G</b><span>LOW</span></div>
+        <div class="pad" data-type="tom"><b>H</b><span>MID</span></div>
+        <div class="pad" data-type="click"><b>I</b><span>TAPTIC</span></div>
     </div>
 
-    <div class="info-tip">🔊 请关闭静音模式 | 建议在iOS Safari中体验</div>
+    <div class="info">Cross-Platform Web Audio Engine / 2026 Edition</div>
 
     <script>
-        // --- 1. 初始化 Web Audio 音频上下文 (核心：iOS兼容性) ---
-        let audioCtx = null;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-        function initAudio() {
-            if (!audioCtx) {
-                // 兼容性写法，优先使用标准AudioContext
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            // iOS核心限制：如果上下文已挂起，必须由用户交互resume()
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-
-        // --- 2. 核心：动态生成真实打击乐声音波形 ---
-        const SoundEngine = {
-            // A. 底鼓 (Kick): 低频、快速衰减
-            kick() {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                // 初始频率150Hz，在0.1s内滑落至1Hz，制造打击瞬间的沉闷感
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + 0.1);
-                // 音量快速衰减
-                gain.gain.setValueAtTime(1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+        // 增强音色库
+        const sounds = {
+            kick: (freq = 120) => {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.frequency.setValueAtTime(freq, ctx.currentTime);
+                o.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                g.gain.setValueAtTime(0.8, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(); o.stop(ctx.currentTime + 0.15);
             },
-            // B. 军鼓 (Snare): 高频噪波混合
-            snare() {
-                // 1. 噪声部分 (White Noise)
-                const bufferSize = audioCtx.sampleRate * 0.1; // 0.1秒噪声
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1; // 生成白噪声
-                }
-                const noise = audioCtx.createBufferSource();
-                noise.buffer = buffer;
-                const noiseGain = audioCtx.createGain();
-                noiseGain.gain.setValueAtTime(1, audioCtx.currentTime);
-                noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                // 2. 混合低频震动部分
-                const osc = audioCtx.createOscillator();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
-                // 3. 混合并输出
-                const snareGain = audioCtx.createGain();
-                snareGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-                noise.connect(noiseGain);
-                noiseGain.connect(snareGain);
-                osc.connect(snareGain);
-                snareGain.connect(audioCtx.destination);
-                noise.start();
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+            snare: (decay = 0.1) => {
+                const g = ctx.createGain(), b = ctx.createBufferSource();
+                const buf = ctx.createBuffer(1, ctx.sampleRate * decay, ctx.sampleRate);
+                for (let i = 0; i < buf.length; i++) buf.getChannelData(0)[i] = Math.random() * 2 - 1;
+                b.buffer = buf;
+                g.gain.setValueAtTime(0.3, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + decay);
+                b.connect(g); g.connect(ctx.destination);
+                b.start();
             },
-            // C. 闭合镲 (Hi-Hat Closed): 高频、极短的噪波
-            'hihat-closed'() {
-                const bufferSize = audioCtx.sampleRate * 0.02; // 极短，仅0.02秒
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
-                const noise = audioCtx.createBufferSource();
-                noise.buffer = buffer;
-                const gain = audioCtx.createGain();
-                // 快速消失
-                gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
-                noise.connect(gain);
-                gain.connect(audioCtx.destination);
-                noise.start();
+            hihat: (dur = 0.02) => {
+                const g = ctx.createGain(), b = ctx.createBufferSource();
+                const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+                for (let i = 0; i < buf.length; i++) buf.getChannelData(0)[i] = Math.random() * 2 - 1;
+                b.buffer = buf;
+                g.gain.setValueAtTime(0.15, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
+                b.connect(g); g.connect(ctx.destination);
+                b.start();
             },
-            // F. 伪触感点击 (Click): 低频 Sine，模拟物理开关声
-            click() {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.frequency.setValueAtTime(160, audioCtx.currentTime); // 沉闷低频
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+            tom: (f = 200) => {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = 'triangle';
+                o.frequency.setValueAtTime(f, ctx.currentTime);
+                o.frequency.exponentialRampToValueAtTime(f / 2, ctx.currentTime + 0.2);
+                g.gain.setValueAtTime(0.4, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(); o.stop(ctx.currentTime + 0.2);
+            },
+            click: () => {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.frequency.setValueAtTime(220, ctx.currentTime);
+                g.gain.setValueAtTime(0.1, ctx.currentTime);
+                g.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.04);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(); o.stop(ctx.currentTime + 0.04);
             }
         };
 
-        // --- 3. 交互逻辑：彻底消除iOS Safari点击延迟 ---
-        const pads = document.querySelectorAll('.drum-pad');
+        // 处理逻辑：适配触控与鼠标
+        function handleTrigger(e) {
+            e.preventDefault();
+            const pad = e.target.closest('.pad');
+            if (!pad) return;
 
-        pads.forEach(pad => {
-            // 核心：使用 touchstart 代替 click，实现零延迟
-            pad.addEventListener('touchstart', (e) => {
-                e.preventDefault(); // 阻止默认的缩放、滚动行为
+            if (ctx.state === 'suspended') ctx.resume();
 
-                // 第一次交互时初始化音频上下文
-                initAudio();
+            const type = pad.getAttribute('data-type');
+            // 简单的音色变体逻辑
+            const index = Array.from(pad.parentNode.children).indexOf(pad);
+            if (type === 'kick') sounds.kick(120 - index * 10);
+            else if (type === 'tom') sounds.tom(200 - index * 20);
+            else sounds[type]();
+        }
 
-                if (audioCtx) {
-                    // 获取音频类型并播放
-                    const soundType = pad.getAttribute('data-sound');
-                    if (SoundEngine[soundType]) {
-                        SoundEngine[soundType]();
-                    } else {
-                        // 如果未定义复杂声音，则默认播放伪触感点击声
-                        SoundEngine.click();
-                    }
+        const grid = document.getElementById('grid');
 
-                    // 添加按下时的视觉反馈 (active 类)
-                    pad.classList.add('active');
-                }
-            });
+        // iOS/Android 触控
+        grid.addEventListener('touchstart', handleTrigger, { passive: false });
 
-            // 松开手指时，移除视觉反馈
-            pad.addEventListener('touchend', () => {
-                pad.classList.remove('active');
-            });
-
-            // 如果手指划出按钮范围，也移除视觉反馈
-            pad.addEventListener('touchcancel', () => {
-                pad.classList.remove('active');
-            });
+        // Windows/macOS 鼠标
+        grid.addEventListener('mousedown', (e) => {
+            // 防止触控设备重复触发 mousedown
+            if (e.detail === 0) return;
+            handleTrigger(e);
         });
+
     </script>
 </body>
 
