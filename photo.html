@@ -43,7 +43,7 @@
 
         .upload-btn {
             background: #d8ebff;
-            color: rgb(155, 155, 255);
+            color: #007aff;
             border: none;
             padding: 8px 16px;
             border-radius: 20px;
@@ -82,10 +82,11 @@
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             border: 1px solid #f0ede6;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
 
         .photo:hover {
-
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
         }
 
@@ -94,9 +95,7 @@
             height: 100%;
             object-fit: cover;
             display: block;
-            transition: transform 0.3s ease;
         }
-
 
         .empty-state {
             grid-column: 1 / -1;
@@ -107,8 +106,10 @@
             font-weight: 400;
         }
 
-        .upload-area {
-            display: none;
+        /* 长按效果 */
+        .photo.deleting {
+            opacity: 0.6;
+            transform: scale(0.95);
         }
 
         @media (max-width: 768px) {
@@ -118,33 +119,12 @@
                 gap: 6px;
             }
         }
+
+        .upload-area {
+            display: none;
+        }
     </style>
-    <!-- 第一步：加视口标签，让页面适配手机屏幕 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <style>
-        /* 第二步：让核心容器自适应，不超出手机屏幕 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            padding: 15px;
-        }
-
-        .upload-area,
-        .gallery {
-            width: 100%;
-            max-width: 100%;
-        }
-
-        /* 相册图片在手机上自适应，不横向滚动 */
-        .gallery img {
-            width: 100%;
-            height: auto;
-        }
-    </style>
 </head>
 
 <body>
@@ -155,125 +135,96 @@
 
     <input type="file" id="file" class="upload-input" accept="image/*" multiple onchange="uploadImage()">
 
-    <!-- 图片展示 -->
     <div class="gallery" id="gallery"></div>
 
     <script>
-        // ====================== 填写你的 Supabase 信息 ======================
         const SUPABASE_URL = "https://lcbqhraxzadgfnzrcvjw.supabase.co";
         const SUPABASE_KEY = "sb_publishable_MdZyOd7UJigomA3xGSd_Ig_gzg5ds5a";
-        const BUCKET_NAME = "ohmyphoto" // 存储桶名称
-        // ===================================================================
+        const BUCKET_NAME = "ohmyphoto";
 
-        // 初始化 Supabase 客户端
-        const { createClient } = supabase
-        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY)
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // 页面加载时加载所有图片
-        window.onload = loadImages
+        window.onload = loadImages;
 
         // 上传图片
         async function uploadImage() {
-            const fileInput = document.getElementById('file')
-            const files = Array.from(fileInput.files)
+            const fileInput = document.getElementById('file');
+            const files = Array.from(fileInput.files);
+            if (files.length === 0) return;
 
-            if (files.length === 0) {
-                alert("请选择图片")
-                return
-            }
+            const uploadBtn = document.querySelector('.upload-btn');
+            const originalText = uploadBtn.textContent;
+            uploadBtn.textContent = "上传中...";
+            uploadBtn.disabled = true;
 
-            // 获取上传按钮并禁用它
-            const uploadBtn = document.querySelector('.upload-btn')
-            const originalText = uploadBtn.textContent
-            uploadBtn.textContent = "上传中..."
-            uploadBtn.disabled = true
-
-            let successCount = 0
-            let failCount = 0
-
+            let success = 0;
             try {
                 for (const file of files) {
-                    try {
-                        // 生成安全的文件名：时间戳 + 随机数 + 扩展名
-                        const timestamp = Date.now() + Math.random()
-                        const extension = file.name.split('.').pop().toLowerCase()
-                        const safeFileName = `${timestamp}.${extension}`
-
-                        console.log("上传文件:", file.name, "->", safeFileName)
-
-                        // 上传到 Supabase Storage
-                        const { data, error } = await supabaseClient.storage
-                            .from(BUCKET_NAME)
-                            .upload(`public/${safeFileName}`, file)
-
-                        if (error) {
-                            console.error("上传失败:", error)
-                            failCount++
-                        } else {
-                            console.log("上传成功:", safeFileName)
-                            successCount++
-                        }
-                    } catch (fileError) {
-                        console.error("文件上传异常:", fileError)
-                        failCount++
-                    }
+                    const name = Date.now() + Math.random() + '.' + file.name.split('.').pop();
+                    await supabaseClient.storage.from(BUCKET_NAME).upload(`public/${name}`, file);
+                    success++;
                 }
-
-                // 显示结果
-                if (successCount > 0) {
-                    alert(`✅ 上传完成！成功: ${successCount} 个${failCount > 0 ? `, 失败: ${failCount} 个` : ''}`)
-                    fileInput.value = ""
-                    loadImages()
-                } else {
-                    alert("❌ 所有文件上传失败")
-                }
-
-            } catch (error) {
-                alert("❌ 上传异常: " + error.message)
-                console.error("上传异常:", error)
+                alert(`上传成功：${success} 张`);
+                loadImages();
+            } catch (e) {
+                alert('上传失败');
             } finally {
-                // 恢复按钮状态
-                uploadBtn.textContent = originalText
-                uploadBtn.disabled = false
+                uploadBtn.textContent = originalText;
+                uploadBtn.disabled = false;
+                fileInput.value = '';
             }
         }
 
-        // 加载并展示所有图片
+        // 加载图片 + 绑定长按删除
         async function loadImages() {
-            const gallery = document.getElementById('gallery')
-            gallery.innerHTML = "<div class='empty-state'>加载中...</div>"
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = "<div class='empty-state'>加载中...</div>";
 
-            try {
-                const { data, error } = await supabaseClient.storage
-                    .from(BUCKET_NAME)
-                    .list('public/', { limit: 100 })
+            const { data, error } = await supabaseClient.storage.from(BUCKET_NAME).list('public/', { limit: 100 });
+            if (error) {
+                gallery.innerHTML = "<div class='empty-state'>加载失败</div>";
+                return;
+            }
 
-                if (error) {
-                    throw new Error(error.message)
-                }
+            gallery.innerHTML = data.length === 0 ? "<div class='empty-state'>暂无图片</div>" : "";
 
-                gallery.innerHTML = ""
+            for (const item of data) {
+                if (item.name === '.keep') continue;
 
-                if (!data || data.length === 0) {
-                    gallery.innerHTML = "<div class='empty-state'>暂无图片</div>"
-                    return
-                }
+                const { data: urlData } = supabaseClient.storage.from(BUCKET_NAME).getPublicUrl(`public/${item.name}`);
 
-                for (const item of data) {
-                    if (item.name === '.keep') continue
+                const div = document.createElement('div');
+                div.className = 'photo';
+                div.innerHTML = `<img src="${urlData.publicUrl}" loading="lazy">`;
 
-                    const { data: urlData } = supabaseClient.storage
-                        .from(BUCKET_NAME)
-                        .getPublicUrl(`public/${item.name}`)
+                // 绑定：长按删除
+                div.oncontextmenu = (e) => {
+                    e.preventDefault();
+                    confirmDelete(item.name, div);
+                };
+                div.ontouchstart = () => {
+                    div.timer = setTimeout(() => confirmDelete(item.name, div), 600);
+                };
+                div.ontouchend = () => clearTimeout(div.timer);
 
-                    const img = document.createElement('div')
-                    img.className = "photo"
-                    img.innerHTML = `<img src="${urlData.publicUrl}" alt="照片" loading="lazy">`
-                    gallery.appendChild(img)
-                }
-            } catch (error) {
-                gallery.innerHTML = "<div class='empty-state'>❌ 加载图片失败</div>"
-                console.error("加载图片错误:", error)
+                gallery.appendChild(div);
+            }
+        }
+
+        // 删除确认
+        async function confirmDelete(fileName, element) {
+            if (!confirm('确定要删除这张图片吗？')) return;
+
+            element.classList.add('deleting');
+            const { error } = await supabaseClient.storage.from(BUCKET_NAME).remove([`public/${fileName}`]);
+
+            if (error) {
+                alert('删除失败');
+                element.classList.remove('deleting');
+            } else {
+                element.style.opacity = '0';
+                setTimeout(() => loadImages(), 300);
             }
         }
     </script>
