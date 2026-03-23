@@ -3,66 +3,98 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>震动按钮</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS Web 震动测试</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
         body {
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: #f2f5ff;
-            padding: 20px;
+            height: 100vh;
+            background-color: #f4f4f9;
+            margin: 0;
         }
 
-        .btn {
-            width: 100%;
-            max-width: 350px;
-            padding: 26px 40px;
-            font-size: 18px;
-            font-weight: 600;
-            background: #007aff;
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        button {
+            background-color: #007AFF;
             color: white;
             border: none;
-            border-radius: 20px;
-            text-align: center;
-            -webkit-appearance: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 12px;
             cursor: pointer;
-            user-select: none;
-            outline: none;
-            transition: transform 0.1s ease;
+            width: 100%;
+            margin-top: 20px;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .btn:active {
-            transform: scale(0.96);
-            background: #0062cc;
+        button:active {
+            background-color: #0051a8;
+            transform: scale(0.98);
+        }
+
+        /* 隐藏的开关元素，必须存在于 DOM 中但不可见 */
+        #haptic-switch {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        p {
+            color: #666;
+            font-size: 14px;
         }
     </style>
 </head>
 
 <body>
 
-    <button class="btn" id="btn">iPhone 点我震动</button>
+    <div class="card">
+        <h2>iOS 震动模拟器</h2>
+        <p>点击下方按钮，尝试触发 iPhone 的 Taptic Engine 触感反馈。</p>
+
+        <input type="checkbox" id="haptic-switch" switch>
+
+        <button id="vibrate-btn">触发震动</button>
+
+        <p style="margin-top: 20px;">注意：请确保手机未处于“静音模式”或“省电模式”，有时会影响反馈强度。</p>
+    </div>
 
     <script>
-        // 必须用 addEventListener —— iPhone 才支持震动！
-        const btn = document.getElementById('btn');
+        const btn = document.getElementById('vibrate-btn');
+        const hapticSwitch = document.getElementById('haptic-switch');
 
-        btn.addEventListener('click', () => {
-            // 只有 click 事件里震动，iPhone 才会生效
-            if (navigator.vibrate) {
-                navigator.vibrate(30);
+        btn.addEventListener('click', function () {
+            // 1. 处理 Android 设备 (标准 API)
+            if ("vibrate" in navigator) {
+                navigator.vibrate(50);
             }
+
+            // 2. 处理 iOS 设备 (技巧性触发)
+            // 必须在点击事件的同步回调中执行
+            hapticSwitch.click();
+
+            console.log("已尝试触发震动反馈");
+
+            // 视觉反馈
+            btn.innerText = "已触发！";
+            setTimeout(() => {
+                btn.innerText = "触发震动";
+            }, 500);
         });
     </script>
-
 </body>
 
 </html>
