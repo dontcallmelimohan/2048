@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简 Markdown 编辑器</title>
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            background: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif
+        }
+
+        .header {
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            background: #fff;
+            border-bottom: 1px solid #eee
+        }
+
+        .title {
+            font-size: 16px;
+            font-weight: 600
+        }
+
+        .count {
+            font-size: 12px;
+            color: #999
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 44px)
+        }
+
+        #editor {
+            flex: 1;
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            line-height: 1.6;
+            border: none;
+            outline: none;
+            resize: none;
+            background: #fafafa
+        }
+
+        #preview {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #fff
+        }
+
+        @media(min-width:768px) {
+            .container {
+                flex-direction: row
+            }
+
+            #editor,
+            #preview {
+                flex: 1;
+                height: 100%
+            }
+        }
+
+        .export {
+            position: fixed;
+            right: 15px;
+            bottom: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #007aff;
+            color: #fff;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="title">极简 Markdown</div>
+        <div class="count" id="count">字数：0</div>
+    </div>
+    <div class="container">
+        <textarea id="editor" placeholder="开始写作..."></textarea>
+        <div id="preview" class="markdown-body"></div>
+    </div>
+    <button class="export" onclick="saveHtml()">↓</button>
+
+    <script type="module">
+        import { marked } from 'https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js';
+        const editor = document.getElementById('editor');
+        const preview = document.getElementById('preview');
+        const count = document.getElementById('count');
+
+        function update() {
+            const text = editor.value;
+            preview.innerHTML = marked.parse(text);
+            count.innerText = `字数：${text.length}`;
+            localStorage.setItem('md', text);
+        }
+
+        editor.addEventListener('input', update);
+        editor.value = localStorage.getItem('md') || '# 欢迎使用极简编辑器';
+        update();
+
+        window.saveHtml = () => {
+            const a = document.createElement('a');
+            a.download = 'markdown.html';
+            a.href = URL.createObjectURL(new Blob([preview.innerHTML], { type: 'text/html' }));
+            a.click();
+        };
+    </script>
+</body>
+
+</html>
