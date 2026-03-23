@@ -119,6 +119,32 @@
             }
         }
     </style>
+    <!-- 第一步：加视口标签，让页面适配手机屏幕 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        /* 第二步：让核心容器自适应，不超出手机屏幕 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            padding: 15px;
+        }
+
+        .upload-area,
+        .gallery {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* 相册图片在手机上自适应，不横向滚动 */
+        .gallery img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
 </head>
 
 <body>
