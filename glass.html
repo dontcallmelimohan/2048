@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>iOS 2026 Glassmorphism Demo</title>
+    <style>
+        :root {
+            /* 1. 定义玻璃色系 */
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --ios-blue: #007AFF;
+
+            /* 2. 定义标准 Spring 动画曲线 (iOS 特有先快后慢感) */
+            --ios-spring: cubic-bezier(0.15, 0, 0.15, 1);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            /* 防止底层背景滚动 */
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            /* 字体更平滑 */
+        }
+
+        /* 3. 底层：鲜艳的 App 模拟背景 (用于测试模糊效果) */
+        .app-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* 使用渐变和图片增加视觉丰富度 */
+            background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%),
+                url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1000&q=80');
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1;
+        }
+
+        .trigger-btn {
+            background-color: var(--ios-blue);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+            transition: transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            /* 核心：防抖 */
+        }
+
+        .trigger-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 4. 核心：玻璃拟态控制面板 */
+        .glass-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+
+            /* 玻璃效果的关键 CSS 属性 */
+            background-color: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(210%);
+            /* 2026风格：高模糊，高饱和度 */
+            -webkit-backdrop-filter: blur(25px) saturate(210%);
+
+            /* 极细边框，模拟玻璃边缘折射 */
+            border-top: 0.5px solid var(--glass-border);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            /* 初始状态：向下偏移并在视觉上隐藏 */
+            transform: translateY(100%);
+            opacity: 0;
+            transition: transform 0.4s var(--ios-spring), opacity 0.3s linear;
+        }
+
+        /* 5. 面板显示时的状态 */
+        .glass-panel.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .panel-content {
+            width: 85%;
+            max-width: 360px;
+            text-align: center;
+            color: #000;
+        }
+
+        .panel-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin: 0;
+        }
+
+        .panel-subtitle {
+            font-size: 16px;
+            color: rgba(0, 0, 0, 0.7);
+            margin: 10px 0 30px 0;
+        }
+
+        .close-btn {
+            background-color: #ffffff;
+            color: var(--ios-blue);
+            border: 1px solid var(--ios-blue);
+            padding: 14px 28px;
+            font-size: 17px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .close-btn:active {
+            background-color: #ebebf0;
+            transform: scale(0.96);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-background">
+        <h1 style="color:white; text-shadow:0 2px 4px rgba(0,0,0,0.2);">主界面</h1>
+        <button class="trigger-btn" id="openBtn">打开控制中心</button>
+    </div>
+
+    <div class="glass-panel" id="glassPanel">
+        <div class="panel-content">
+            <div class="panel-icon">⚙️</div>
+            <h2 class="panel-title">玻璃拟态 (iOS 2026)</h2>
+            <p class="panel-subtitle">这是通过饱和度增强(210%)和高模糊度(25px)营造的深度交互反馈。</p>
+            <button class="close-btn" id="closeBtn">确 认</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Web Audio 伪触感音效核心 ---
+        let audioCtx = null;
+        function playHapticFeedback() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            // 频率设置：160Hz 沉闷的木质点击声
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+
+            // 音量曲线：制造快速消失的“咔嗒”瞬态
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // --- 2. 交互逻辑 ---
+        const openBtn = document.getElementById('openBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const glassPanel = document.getElementById('glassPanel');
+
+        openBtn.addEventListener('click', () => {
+            playHapticFeedback(); // 弹出时，触发“咔嗒”声音反馈
+            glassPanel.classList.add('show');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            playHapticFeedback(); // 关闭时，再次触发声音反馈
+            glassPanel.classList.remove('show');
+        });
+    </script>
+</body>
+
+</html>
