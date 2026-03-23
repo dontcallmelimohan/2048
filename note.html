@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>留言板</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui
+        }
+
+        body {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 25px 18px;
+            background: #fff
+        }
+
+        input {
+            width: 100%;
+            padding: 16px 18px;
+            border: 1px solid #eee;
+            border-radius: 14px;
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 20px
+        }
+
+        .msg {
+            padding: 14px 0;
+            border-bottom: 1px solid #f7f7f7;
+            font-size: 16px;
+            line-height: 1.5;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start
+        }
+
+        .msg-text {
+            flex: 1
+        }
+
+        .del {
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+            padding-left: 10px
+        }
+
+        .time {
+            font-size: 12px;
+            color: #999;
+            margin-top: 6px
+        }
+    </style>
+</head>
+
+<body>
+
+    <input id="i" placeholder="写下你的留言…" onkeydown="event.key==='Enter'&&s()">
+    <div id="m"></div>
+
+    <script>
+        const sb = supabase.createClient("https://lcbqhraxzadgfnzrcvjw.supabase.co", "sb_publishable_MdZyOd7UJigomA3xGSd_Ig_gzg5ds5a")
+
+        // 发送
+        async function s() {
+            const t = document.getElementById("i").value.trim();
+            if (!t) return;
+            await sb.from("messages").insert({ content: t });
+            document.getElementById("i").value = '';
+            l();
+        }
+
+        // 删除
+        async function del(id) {
+            if (!confirm("确定删除这条留言？")) return;
+            await sb.from("messages").delete().eq("id", id);
+            l();
+        }
+
+        // 加载
+        async function l() {
+            const { data } = await sb.from("messages").select("*").order("created_at", { ascending: false });
+            const o = document.getElementById("m");
+            o.innerHTML = '';
+            data.forEach(x => {
+                const d = document.createElement("div");
+                d.className = 'msg';
+                d.innerHTML = `
+      <div class="msg-text">
+        ${x.content}
+        <div class="time">${new Date(x.created_at).toLocaleString()}</div>
+      </div>
+      <div class="del" onclick="del(${x.id})">删除</div>
+    `;
+                o.appendChild(d);
+            });
+        }
+
+        l();
+    </script>
+</body>
+
+</html>
