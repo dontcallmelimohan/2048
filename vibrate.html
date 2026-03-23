@@ -18,49 +18,49 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+            background: #f2f5ff;
             padding: 20px;
         }
 
-        .vibrate-btn {
+        .btn {
             width: 100%;
-            max-width: 320px;
-            padding: 24px 40px;
-            font-size: 19px;
+            max-width: 350px;
+            padding: 26px 40px;
+            font-size: 18px;
             font-weight: 600;
             background: #007aff;
             color: white;
             border: none;
-            border-radius: 24px;
+            border-radius: 20px;
+            text-align: center;
+            -webkit-appearance: none;
             cursor: pointer;
-            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.25);
-            transition: all 0.18s cubic-bezier(0.25, 1, 0.5, 1);
-            -webkit-tap-highlight-color: transparent;
             user-select: none;
             outline: none;
+            transition: transform 0.1s ease;
         }
 
-        .vibrate-btn:active {
-            transform: scale(0.94);
-            box-shadow: 0 4px 10px rgba(0, 122, 255, 0.15);
-            background: #0066cc;
+        .btn:active {
+            transform: scale(0.96);
+            background: #0062cc;
         }
     </style>
 </head>
 
 <body>
 
-    <button class="vibrate-btn" onclick="vibrateAndClick()">
-        点我有震动反馈
-    </button>
+    <button class="btn" id="btn">iPhone 点我震动</button>
 
     <script>
-        function vibrateAndClick() {
-            // 更强更清晰的震动（手机必震）
+        // 必须用 addEventListener —— iPhone 才支持震动！
+        const btn = document.getElementById('btn');
+
+        btn.addEventListener('click', () => {
+            // 只有 click 事件里震动，iPhone 才会生效
             if (navigator.vibrate) {
-                navigator.vibrate([10, 20, 10]); // 短震动组合，手感最强
+                navigator.vibrate(30);
             }
-        }
+        });
     </script>
 
 </body>
